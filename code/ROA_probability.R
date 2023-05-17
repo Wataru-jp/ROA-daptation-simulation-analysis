@@ -125,7 +125,7 @@ eps <- c(0, 0.5, 2, 3) # list of epsilon
 # EPV probability
 for (e in 1:3) {
   assign(paste0("prob_EPV", e), list())
-  adap_EPV <- apply(pi_c_t, 1, FUN = function(x) {x < threshold_EPV[e]})
+  adap_EPV <- apply(x_c_t, 1, FUN = function(x) {x < threshold_EPV[e]})
   for (i in 1:ncol(adap_EPV)) {
     if(sum(adap_EPV[,i])>0) {
       adap_EPV[,i][min(which(adap_EPV[,i]==TRUE)):length(adap_EPV[,i])] <- TRUE
@@ -145,7 +145,7 @@ for (e in 1:3) {
 # ROA probability
 for (e in 1:3) {
   assign(paste0("prob", e), list())
-  adapt <- apply(pi_c_t, 1, FUN = function(x) {x < threshold[e]})
+  adapt <- apply(x_c_t, 1, FUN = function(x) {x < threshold[e]})
   for (i in 1:ncol(adapt)) {
     if(sum(adapt[,i])>0) {
       adapt[,i][min(which(adapt[,i]==TRUE)):length(adapt[,i])] <- TRUE
@@ -189,8 +189,8 @@ dev.off()
 ### 3. Sensitivity analysis
 ############################################
 para <- c(0.02, 0.2, 0.25, 0.05, 0.2) # baseline (mu, sigma, eta, lambda, rho)
-para2 <- c(para[1] + 0.00125, para[2] + 0.125/2, para[3] + 0.125, para[4] + 0.025)
-#para2 <- c(para[1] + 0.0025, para[2] + 0.25/2, para[3] + 0.25, para[4] + 0.05)
+#para2 <- c(para[1] + 0.00625, para[2] + 0.125/2, para[3] + 0.125, para[4] + 0.025)
+para2 <- c(para[1] + para[3]*para[4], para[2] + para[3]/2, para[3] + para[3], para[4] + para[4])
 eps <- c(0, 0.5, 2) # list of epsilon
 
 # Simulation parameters
@@ -429,7 +429,7 @@ df_prob <- rbind(df1, df2, df3)
 ### Preparation
 # Round the values to 2 decimal places
 df_prob[, 2:11] <- round(df_prob[, 2:11], 2)
-df_threshold[, 2:7] <- round(df_threshold[, 2:7], 3)
+df_threshold[, 2:11] <- round(df_threshold[, 2:11], 3)
 df_threshold[, c(5, 7, 9, 11)] <- round(df_threshold[, c(5, 7, 9, 11)], 2)
 
 # Format the values
