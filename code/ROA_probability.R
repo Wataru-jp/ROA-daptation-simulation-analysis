@@ -356,6 +356,22 @@ legend("bottomright", cex = 0.8, lty=c(1, 2, 2, 2, 2),
                   expression(paste(eta, "+", Delta, eta))))
 dev.off()
 
+png("03_Programming/simulation/figure/sensitivity.png", width = 5, height = 4, units = 'in', res = 500)
+plot(t, prob1, type='l', lty=1, ylim=c(0, 100), xlab='Time', ylab='Probability')
+lines(t, prob3, lty = 2, col="black")
+lines(t, prob3_mu, lty = 2, col="blue")
+lines(t, prob3_sigma, lty = 2, col="green")
+lines(t, prob3_lambda, lty = 2, col="red")
+lines(t, prob3_eta, lty = 2, col="orange")
+legend("bottomright", cex = 0.8, lty=c(1, 2, 2, 2, 2, 2), 
+       col=c("black", "black", "blue", "green", "red", "orange"),
+       legend = c(expression(paste("Baseline", " (", epsilon, " = 0)")), 
+                  expression(paste("Baseline", " (", epsilon, " = 2)")), 
+                  expression(paste(mu, "+", Delta, mu, " (", epsilon, " = 2)")),
+                  expression(paste(sigma, "+", Delta, sigma, " (", epsilon, " = 2)")),
+                  expression(paste(lambda, "+", Delta, lambda, " (", epsilon, " = 2)")),
+                  expression(paste(eta, "+", Delta, eta, " (", epsilon, " = 2)"))))
+dev.off()
 
 ############################################
 ### 4.1 Export to table
