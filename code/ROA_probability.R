@@ -12,7 +12,7 @@ setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de
 ################################
 para <- c(0.02, 0.2, 0.25, 0.05, 0.2) # baseline (mu, sigma, eta, lambda, rho)
 eps <- c(0, 0.5, 2, 4) # list of epsilon
-I <- 2
+I <- 3
 # Simulation parameters
 n <- 10000                # Number of runs --> GO MUCH LARGER!
 #Tlength <- 1              # Time period
@@ -66,20 +66,36 @@ set.seed(1404)      # WK Birthday
 
 # Simulate GBM with Poisson Jump process
 for (i in 1:n) {
-  W <- cumsum(rnorm(N - 1, mean = 0, sd = sqrt(dt)))    # Brownian motion
-  J <- rpois(N - 1, para[4] * dt)                       # Number of jumps at each time step
+  #W <- cumsum(rnorm(N - 1, mean = 0, sd = sqrt(dt)))    # Brownian motion
+  #  J <- rpois(N - 1, para[4] * dt)                       # Number of jumps at each time step
   
-  jumps <- J * para[3] * x0                            # Jump sizes
-  cum_jumps <- cumsum(jumps)                            # Cumulative jumps
+  #jumps <- J * para[3] * x0                            # Jump sizes
+  #cum_jumps <- cumsum(jumps)                            # Cumulative jumps
   
   # GBM with jumps
-  x_c_t[i, -1] <- x0 * exp((- para[1] - 0.5 * para[2]^2) * t[-1] + para[2] * W - cum_jumps)
+  #x_c_t[i, -1] <- x0 * exp((- para[1] - 0.5 * para[2]^2) * t[-1] + para[2] * W - cum_jumps)
+  for (t in 1:(N-1)) {
+    W <- rnorm(1, mean = 0, sd = sqrt(dt))
+    J <- rpois(1, para[4] * dt)
+    x_c_t[i, t+1] <- x_c_t[i, t] - para[1] * x_c_t[i, t] + W * para[2] * x_c_t[i, t] - para[3] * J * x_c_t[i, t]
+  }
+}
+
+
+x_c_t <- matrix(0, n, N)
+x_c_t[, 1] <- x0
+for (i in 1:n) {
+  for (t in 1:(N-1)) {
+    W <- rnorm(1, mean = 0, sd = sqrt(dt))
+    J <- rpois(1, para[4] * dt)
+    x_c_t[i, t+1] <- x_c_t[i, t] - para[1]*x_c_t[i, t] + W*para[2]*x_c_t[i, t] - para[3] * J*x_c_t[i, t]
+  }
 }
 
 # Results
 rownames(x_c_t) <- paste0("Run_", 1:n)
 colnames(x_c_t) <- t
-
+t <- 1:N  
 
 
 ### Graph ###
@@ -88,7 +104,7 @@ setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de
 
 # Plot one draw
 png("03_Programming/simulation/figure/random_draw.png", width = 5, height = 4, units = 'in', res = 500)
-plot(t, x_c_t[3, ], type = "l", ylim = c(0, 1.5), 
+plot(t, x_c_t[1, ], type = "l", ylim = c(0, 1.5), 
      xlab = "Time", ylab = "Payoff")
 abline(h=threshold_EPV[1], lty = 1)
 abline(h=threshold[1], lty = 2)
@@ -101,9 +117,9 @@ dev.off()
 
 # Plot five draws
 png("03_Programming/simulation/figure/random_draw2.png", width = 5, height = 4, units = 'in', res = 500)
-plot(t, x_c_t[3, ], type = "l", ylim = c(0, 1.7), 
+plot(t, x_c_t[1, ], type = "l", ylim = c(0, 1.7), 
      xlab = "Time", ylab = "Payoff")
-for (i in c(2, 4, 5)) {
+for (i in c(2, 3, 4)) {
   lines(t, x_c_t[i, ], lty = 1)
 }
 abline(h = threshold_EPV[1], lty = 1)
@@ -189,8 +205,12 @@ dev.off()
 ### 3. Sensitivity analysis
 ############################################
 para <- c(0.02, 0.2, 0.25, 0.05, 0.2) # baseline (mu, sigma, eta, lambda, rho)
-#para2 <- c(para[1] + 0.00625, para[2] + 0.125/2, para[3] + 0.125, para[4] + 0.025)
-para2 <- c(para[1] + para[3]*para[4], para[2] + para[3]/2, para[3] + para[3], para[4] + para[4])
+# expected loss
+#para2 <- c(para[1] + para[3]*para[4], para[2] + para[3]/2, para[3] + para[3], para[4] + para[4])
+# elasticity
+#para2 <- c(para[1] + 0.025/para[4]*para[1], para[2] + 0.025/para[4]*para[2], para[3] + 0.025/para[4]*para[3], para[4] + 0.025) 
+# expected loss & elasticity
+para2 <- c(para[1] + 0.025*para[3], para[2] + 0.025/para[4]*para[2], para[3] + 0.025* para[3]/ para[4], para[4] + 0.025)
 eps <- c(0, 0.5, 2) # list of epsilon
 
 # Simulation parameters
@@ -210,15 +230,24 @@ for (var in variables) {
 
 # Simulation
 for (i in 1:n) {
-  W <- cumsum(rnorm(N - 1, mean = 0, sd = sqrt(dt)))    # Brownian motion
-  J <- rpois(N - 1, para[4] * dt) * para[3] * x0       # Number of jumps and size at each time step
-  J_lambda <- rpois(N - 1, para2[4] * dt) * para[3] * x0 
-  J_eta <- rpois(N - 1, para[4] * dt) * para2[3] * x0       
+  #W <- cumsum(rnorm(N - 1, mean = 0, sd = sqrt(dt)))    # Brownian motion
+  #J <- rpois(N - 1, para[4] * dt) * para[3] * x0       # Number of jumps and size at each time step
+  #J_lambda <- rpois(N - 1, para2[4] * dt) * para[3] * x0 
+  #J_eta <- rpois(N - 1, para[4] * dt) * para2[3] * x0       
   # GBM with jumps
-  x_c_t_mu[i, -1] <- x0 * exp((- para2[1] - 0.5 * (para[2])^2) * t[-1] + para[2] * W - cumsum(J))
-  x_c_t_sigma[i, -1] <- x0 * exp((- para[1] - 0.5 * (para2[2])^2) * t[-1] + para2[2] * W - cumsum(J))
-  x_c_t_lambda[i, -1] <- x0 * exp((- para[1] - 0.5 * (para[2])^2) * t[-1] + para[2] * W - cumsum(J_lambda))
-  x_c_t_eta[i, -1] <- x0 * exp((- para[1] - 0.5 * (para[2])^2) * t[-1] + para[2] * W - cumsum(J_eta))
+  #x_c_t_mu[i, -1] <- x0 * exp((- para2[1] - 0.5 * (para[2])^2) * t[-1] + para[2] * W - cumsum(J))
+  #x_c_t_sigma[i, -1] <- x0 * exp((- para[1] - 0.5 * (para2[2])^2) * t[-1] + para2[2] * W - cumsum(J))
+  #x_c_t_lambda[i, -1] <- x0 * exp((- para[1] - 0.5 * (para[2])^2) * t[-1] + para[2] * W - cumsum(J_lambda))
+  #x_c_t_eta[i, -1] <- x0 * exp((- para[1] - 0.5 * (para[2])^2) * t[-1] + para[2] * W - cumsum(J_eta))
+  for (t in 1:(N-1)) {
+    W <- rnorm(1, mean = 0, sd = sqrt(dt))
+    J <- rpois(1, para[4] * dt)
+    J2 <- rpois(1, para2[4] * dt)
+    x_c_t_mu[i, t+1] <- x_c_t_mu[i, t] - para2[1] * x_c_t_mu[i, t] + W * para[2] * x_c_t_mu[i, t] - para[3] * J * x_c_t_mu[i, t]
+    x_c_t_sigma[i, t+1] <- x_c_t_sigma[i, t] - para[1] * x_c_t_sigma[i, t] + W * para2[2] * x_c_t_sigma[i, t] - para[3] * J * x_c_t_sigma[i, t]
+    x_c_t_lambda[i, t+1] <- x_c_t_lambda[i, t] - para[1] * x_c_t_lambda[i, t] + W * para[2] * x_c_t_lambda[i, t] - para[3] * J2 * x_c_t_lambda[i, t]
+    x_c_t_eta[i, t+1] <- x_c_t_eta[i, t] - para[1] * x_c_t_eta[i, t] + W * para[2] * x_c_t_eta[i, t] - para2[3] * J * x_c_t_eta[i, t]
+  }
 }
 
 #####change in mu #####
@@ -323,6 +352,8 @@ for (j in 1:3) {
 
 
 ### Graph ### 
+t <- 1:N  
+
 png("03_Programming/simulation/figure/sensitivity0.png", width = 5, height = 4, units = 'in', res = 500)
 plot(t, prob1, type='l', lty=1, ylim=c(0, 100), xlab='Time', ylab='Probability')
 lines(t, prob1_mu, lty = 2, col="blue")
@@ -374,7 +405,7 @@ legend("bottomright", cex = 0.8, lty=c(1, 2, 2, 2, 2, 2),
 dev.off()
 
 ############################################
-### 4.1 Export to table
+### 3.1 Export to table
 ############################################
 ###  Changes in threshold compared to baseline
 threshold2 <- c(threshold[1], threshold[2], threshold[3])
@@ -468,3 +499,421 @@ writeData(wb, "Threshold", df_threshold)
 writeData(wb, "Probability", df_prob)
 # Save the workbook to a file
 saveWorkbook(wb, "03_Programming/table/sensitivity.xlsx")
+
+
+
+############################################
+### 4. Different values of parameters
+############################################
+para <- c(0.03, 0.2, 0.25, 0.05, 0.2) # baseline (mu, sigma, eta, lambda, rho)
+# range of parameters
+cat("Max of drift rate is: ", para[5] - (para[2])^2 - para[3]* para[4]/ (1 - para[3]) )
+cat("Max of volatility is: ", sqrt(para[5] - para[1] - para[3]* para[4]/ (1 - para[3])) )
+cat("Max of frequency is: ", (1 - para[3])/ para[3]* (para[5] - para[1] - (para[2])^2) )
+cat("Max of magnitude is: ", (para[5] - para[1] - (para[2])^2)/ (para[4] + para[5] - para[1] - (para[2])^2) )
+# elasticity
+para2 <- c(para[1] + 0.025/para[4]*para[1], para[2] + 0.025/para[4]*para[2], para[3] + 0.025/para[4]*para[3], para[4] + 0.025) 
+para3 <- c(para[1] + 0.05/para[4]*para[1], para[2] + 0.05/para[4]*para[2], para[3] + 0.05/para[4]*para[3], para[4] + 0.05) 
+para4 <- c(para[1] - 0.05/para[4]*para[1], para[2] - 0.05/para[4]*para[2], para[3] - 0.05/para[4]*para[3], para[4] - 0.05) 
+# expected loss & elasticity
+#para2 <- c(para[1] + para[3]*para[4], para[2] + para[2], para[3] + para[3], para[4] + para[4])
+
+
+eps <- c(0, 0.5, 2) # list of epsilon
+I <- 3
+
+# Simulation parameters
+n <- 10000                # Number of runs --> GO MUCH LARGER!
+Tlength <- 30              # Time period
+dt <- 1                    # Time step
+t <- seq(0, Tlength, dt)  # steps
+N <- length(t)            # Number of steps
+
+# Simulation initialization
+set.seed(1404)      # WK Birthday
+variables <- c("mu", "sigma", "lambda", "eta")
+x_ct <- matrix(0, n, N)
+x_ct[, 1] <- x0
+
+
+### 1. Relationship with drift rate ### 
+drift <- seq(0, 0.05, 0.01) # drift rate range
+for (i in 0:2) {
+  assign(paste0("thr_list", i, "a"), list())
+  assign(paste0("prob_list", i), list())
+  assign(paste0("prob2_list", i), list())
+  assign(paste0("prob5_mu", i), list())
+  assign(paste0("prob10_mu", i), list())
+} 
+delta_list <- list()
+hurdle_list <- list()
+beta <- list()
+
+for (x in 1:length(drift)){
+  # threshold
+  delta_list <- delta_fn(drift[x], para[2], para[3], para[4], para[5], eps)
+  beta <- uniroot(polynomial_fn, c(-10, 0), tol = 0.0001, m = drift[x], 
+                             s = para[2], e = para[3], l = para[4], r = para[5])$root
+  hurdle_list <- (beta/ (beta - 1 + eps))^ (1/(1-eps))
+  threshold_mu <- hurdle_list* (delta_list/para[5])^ (1/ (1 - eps))* (1 - I* 0.1)
+  thr_list0a[[x]] <- hurdle_list[1]* (delta_list[1]/para[5])* (1 - I* 0.1)
+  thr_list1a[[x]] <- hurdle_list[2]* (delta_list[2]/para[5])^2* (1 - I* 0.1)
+  thr_list2a[[x]] <- hurdle_list[3]* (para[5]/delta_list[3])* (1 - I* 0.1)
+  # simulation
+  for (i in 1:n) {
+    for (t in 1:(N-1)) {
+      W <- rnorm(1, mean = 0, sd = sqrt(dt))
+      J <- rpois(1, para[4] * dt)
+      x_ct[i, t+1] <- x_ct[i, t] - drift[x] * x_ct[i, t] + W * para[2] * x_ct[i, t] - para[3] * J * x_ct[i, t]
+    }
+  }
+  # loop over epsilon
+  for (j in 1:3) {
+    # Create adaptation matrix
+    adaptation <- apply(x_ct, 1, FUN = function(x) {x < threshold_mu[j]})
+    for (i in 1:ncol(adaptation)) {
+      if(sum(adaptation[,i])>0) {
+        adaptation[,i][min(which(adaptation[,i]==TRUE)):length(adaptation[,i])] <- TRUE
+      }
+    }
+    # Create prob variable
+    prob <- list()
+    for (i in 1:N) {
+      prob[[i]] <- rowSums(adaptation)[i]/ncol(adaptation)*100
+    }
+    # Assign prob variable to the corresponding epsilon
+    assign(paste0("probability", j), prob)
+  }
+  prob_list0[[x]] <- probability1[6]
+  prob_list1[[x]] <- probability2[6]
+  prob_list2[[x]] <- probability3[6]
+  prob2_list0[[x]] <- probability1[11]
+  prob2_list1[[x]] <- probability2[11]
+  prob2_list2[[x]] <- probability3[11]
+}
+
+# make them vector
+prob5_mu0 <- unlist(lapply(prob_list0, `[[`, 1))
+prob5_mu1 <- unlist(lapply(prob_list1, `[[`, 1))
+prob5_mu2 <- unlist(lapply(prob_list2, `[[`, 1))
+prob10_mu0 <- unlist(lapply(prob2_list0, `[[`, 1))
+prob10_mu1 <- unlist(lapply(prob2_list1, `[[`, 1))
+prob10_mu2 <- unlist(lapply(prob2_list2, `[[`, 1))
+
+
+
+### 2. Relationship with volatility ### 
+volatil <- seq(0, 0.5, 0.005) # volatility range
+for (i in 0:2) {
+  assign(paste0("thr_list", i, "b"), list())
+  assign(paste0("prob_list", i), list())
+  assign(paste0("prob2_list", i), list())
+  assign(paste0("prob5_sigma", i), list())
+  assign(paste0("prob10_sigma", i), list())
+} 
+delta_list <- list()
+hurdle_list <- list()
+beta <- list()
+
+for (x in 1:length(volatil)){
+  delta_list <- delta_fn(para[1], volatil[x], para[3], para[4], para[5], eps)
+  beta <- uniroot(polynomial_fn, c(-10, 0), tol = 0.0001, m = para[1], 
+                        s = volatil[x], e = para[3], l = para[4], r = para[5])$root
+  hurdle_list <- (beta/ (beta - 1 + eps))^ (1/(1-eps))
+  threshold_sigma <- hurdle_list* (delta_list/para[5])^ (1/ (1 - eps))* (1 - I* 0.1)
+  thr_list0b[[x]] <- hurdle_list[1]* (delta_list[1]/para[5])* (1 - I* 0.1)
+  thr_list1b[[x]] <- hurdle_list[2]* (delta_list[2]/para[5])^2* (1 - I* 0.1)
+  thr_list2b[[x]] <- hurdle_list[3]* (para[5]/delta_list[3])* (1 - I* 0.1)
+  # simulation
+  for (i in 1:n) {
+    for (t in 1:(N-1)) {
+      W <- rnorm(1, mean = 0, sd = sqrt(dt))
+      J <- rpois(1, para[4] * dt)
+      x_ct[i, t+1] <- x_ct[i, t] - para[1] * x_ct[i, t] + W * volatil[x] * x_ct[i, t] - para[3] * J * x_ct[i, t]
+    }
+  }
+  # loop over epsilon
+  for (j in 1:3) {
+    # Create adaptation matrix
+    adaptation <- apply(x_ct, 1, FUN = function(x) {x < threshold_sigma[j]})
+    for (i in 1:ncol(adaptation)) {
+      if(sum(adaptation[,i])>0) {
+        adaptation[,i][min(which(adaptation[,i]==TRUE)):length(adaptation[,i])] <- TRUE
+      }
+    }
+    # Create prob variable
+    prob <- list()
+    for (i in 1:N) {
+      prob[[i]] <- rowSums(adaptation)[i]/ncol(adaptation)*100
+    }
+    # Assign prob variable to the corresponding epsilon
+    assign(paste0("probability", j), prob)
+  }
+  prob_list0[[x]] <- probability1[6]
+  prob_list1[[x]] <- probability2[6]
+  prob_list2[[x]] <- probability3[6]
+  prob2_list0[[x]] <- probability1[11]
+  prob2_list1[[x]] <- probability2[11]
+  prob2_list2[[x]] <- probability3[11]
+}
+
+# make them vector
+prob5_sigma0 <- unlist(lapply(prob_list0, `[[`, 1))
+prob5_sigma1 <- unlist(lapply(prob_list1, `[[`, 1))
+prob5_sigma2 <- unlist(lapply(prob_list2, `[[`, 1))
+prob10_sigma0 <- unlist(lapply(prob2_list0, `[[`, 1))
+prob10_sigma1 <- unlist(lapply(prob2_list1, `[[`, 1))
+prob10_sigma2 <- unlist(lapply(prob2_list2, `[[`, 1))
+
+
+### 3. Relationship with magnitude of weather extremes ### 
+etalist <- seq(0.0, 0.5, 0.01) # magnitude of shock range
+for (i in 0:2) {
+  assign(paste0("thr_list", i, "c"), list())
+  assign(paste0("prob_list", i), list())
+  assign(paste0("prob2_list", i), list())
+  assign(paste0("prob5_eta", i), list())
+  assign(paste0("prob10_eta", i), list())
+} 
+delta_list <- list()
+hurdle_list <- list()
+beta <- list()
+
+for (x in 1:length(etalist)){
+  delta_list <- delta_fn(para[1], para[2], etalist[x], para[4], para[5], eps)
+  beta <- uniroot(polynomial_fn, c(-10, 0), tol = 0.0001, m = para[1], 
+                  s = para[2], e = etalist[x], l = para[4], r = para[5])$root
+  hurdle_list <- (beta/ (beta - 1 + eps))^ (1/(1-eps))
+  threshold_eta <- hurdle_list* (delta_list/para[5])^ (1/ (1 - eps))* (1 - I* 0.1)
+  thr_list0c[[x]] <- hurdle_list[1]* (delta_list[1]/para[5])* (1 - I* 0.1)
+  thr_list1c[[x]] <- hurdle_list[2]* (delta_list[2]/para[5])^2* (1 - I* 0.1)
+  thr_list2c[[x]] <- hurdle_list[3]* (para[5]/delta_list[3])* (1 - I* 0.1)
+  # simulation
+  for (i in 1:n) {
+    for (t in 1:(N-1)) {
+      W <- rnorm(1, mean = 0, sd = sqrt(dt))
+      J <- rpois(1, para[4] * dt)
+      x_ct[i, t+1] <- x_ct[i, t] - para[1] * x_ct[i, t] + W * para[2] * x_ct[i, t] - etalist[x] * J * x_ct[i, t]
+    }
+  }
+  # loop over epsilon
+  for (j in 1:3) {
+    # Create adaptation matrix
+    adaptation <- apply(x_ct, 1, FUN = function(x) {x < threshold_eta[j]})
+    for (i in 1:ncol(adaptation)) {
+      if(sum(adaptation[,i])>0) {
+        adaptation[,i][min(which(adaptation[,i]==TRUE)):length(adaptation[,i])] <- TRUE
+      }
+    }
+    # Create prob variable
+    prob <- list()
+    for (i in 1:N) {
+      prob[[i]] <- rowSums(adaptation)[i]/ncol(adaptation)*100
+    }
+    # Assign prob variable to the corresponding epsilon
+    assign(paste0("probability", j), prob)
+  }
+  prob_list0[[x]] <- probability1[6]
+  prob_list1[[x]] <- probability2[6]
+  prob_list2[[x]] <- probability3[6]
+  prob2_list0[[x]] <- probability1[11]
+  prob2_list1[[x]] <- probability2[11]
+  prob2_list2[[x]] <- probability3[11]
+}
+
+# make them vector
+prob5_eta0 <- unlist(lapply(prob_list0, `[[`, 1))
+prob5_eta1 <- unlist(lapply(prob_list1, `[[`, 1))
+prob5_eta2 <- unlist(lapply(prob_list2, `[[`, 1))
+prob10_eta0 <- unlist(lapply(prob2_list0, `[[`, 1))
+prob10_eta1 <- unlist(lapply(prob2_list1, `[[`, 1))
+prob10_eta2 <- unlist(lapply(prob2_list2, `[[`, 1))
+
+
+### 4. Relationship with frequency of weather extreme ### 
+lamlist <- seq(0, 0.2, 0.01) # magnitude of shock range
+for (i in 0:2) {
+  assign(paste0("thr_list", i, "d"), list())
+  assign(paste0("prob_list", i), list())
+  assign(paste0("prob2_list", i), list())
+  assign(paste0("prob5_lambda", i), list())
+  assign(paste0("prob10_lambda", i), list())
+} 
+delta_list <- list()
+hurdle_list <- list()
+beta <- list()
+
+for (x in 1:length(lamlist)){
+  delta_list <- delta_fn(para[1], para[2], para[3], lamlist[x], para[5], eps)
+  beta <- uniroot(polynomial_fn, c(-10, 0), tol = 0.0001, m = para[1], 
+                  s = para[2], e = para[3], l = lamlist[x], r = para[5])$root
+  hurdle_list <- (beta/ (beta - 1 + eps))^ (1/(1-eps))
+  threshold_lam <- hurdle_list* (delta_list/para[5])^ (1/ (1 - eps))* (1 - I* 0.1)
+  thr_list0d[[x]] <- hurdle_list[1]* (delta_list[1]/para[5])* (1 - I* 0.1)
+  thr_list1d[[x]] <- hurdle_list[2]* (delta_list[2]/para[5])^2* (1 - I* 0.1)
+  thr_list2d[[x]] <- hurdle_list[3]* (para[5]/delta_list[3])* (1 - I* 0.1)
+  # simulation
+  for (i in 1:n) {
+    for (t in 1:(N-1)) {
+      W <- rnorm(1, mean = 0, sd = sqrt(dt))
+      J <- rpois(1, lamlist[x] * dt)
+      x_ct[i, t+1] <- x_ct[i, t] - para[1] * x_ct[i, t] + W * para[2] * x_ct[i, t] - para[3] * J * x_ct[i, t]
+    }
+  }
+  # loop over epsilon
+  for (j in 1:3) {
+    # Create adaptation matrix
+    adaptation <- apply(x_ct, 1, FUN = function(x) {x < threshold_lam[j]})
+    for (i in 1:ncol(adaptation)) {
+      if(sum(adaptation[,i])>0) {
+        adaptation[,i][min(which(adaptation[,i]==TRUE)):length(adaptation[,i])] <- TRUE
+      }
+    }
+    # Create prob variable
+    prob <- list()
+    for (i in 1:N) {
+      prob[[i]] <- rowSums(adaptation)[i]/ncol(adaptation)*100
+    }
+    # Assign prob variable to the corresponding epsilon
+    assign(paste0("probability", j), prob)
+  }
+  prob_list0[[x]] <- probability1[6]
+  prob_list1[[x]] <- probability2[6]
+  prob_list2[[x]] <- probability3[6]
+  prob2_list0[[x]] <- probability1[11]
+  prob2_list1[[x]] <- probability2[11]
+  prob2_list2[[x]] <- probability3[11]
+}
+
+# make them vector
+prob5_lambda0 <- unlist(lapply(prob_list0, `[[`, 1))
+prob5_lambda1 <- unlist(lapply(prob_list1, `[[`, 1))
+prob5_lambda2 <- unlist(lapply(prob_list2, `[[`, 1))
+prob10_lambda0 <- unlist(lapply(prob2_list0, `[[`, 1))
+prob10_lambda1 <- unlist(lapply(prob2_list1, `[[`, 1))
+prob10_lambda2 <- unlist(lapply(prob2_list2, `[[`, 1))
+
+
+############################################
+### 4.1 Graph: threshold
+############################################
+setwd("C:/OwnCloud/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
+setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
+#par(mfrow = c(2, 2), cex.main = 0.8)
+#par(mfrow=c(1,1), cex.main = 1)
+
+# First plot
+png("03_Programming/figure/threhold_mu.png", width = 5, height = 4, units = 'in', res = 500)
+plot(drift, thr_list0a, type='l', lty=1, ylim=c(0.51,0.60), xlab='', ylab='')
+lines(drift, thr_list1a, lty=2)
+lines(drift, thr_list2a, lty=3)
+#points(drift, thr_list0a, pch = 10, cex = 0.5)
+legend("bottomright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+# Second plot
+png("03_Programming/figure/threhold_sigma.png", width = 5, height = 4, units = 'in', res = 500)
+plot(volatil, thr_list0b, type='l', lty=1, ylim=c(0.32,0.7), xlab='', ylab='')
+lines(volatil, thr_list1b, lty=2)
+lines(volatil, thr_list2b, lty=3)
+#points(volatil, thr_list0b, pch = 10, cex = 0.5)
+legend("topright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+# Third plot
+png("03_Programming/figure/threhold_lambda.png", width = 5, height = 4, units = 'in', res = 500)
+plot(lamlist, thr_list0d, type='l', lty=1, ylim=c(0.54,0.59), xlab='', ylab='')
+lines(lamlist, thr_list1d, lty=2)
+lines(lamlist, thr_list2d, lty=3)
+#points(lamlist, thr_list0d, pch = 10, cex = 0.5)
+legend("bottomright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+# Fourth plot
+png("03_Programming/figure/threhold_eta.png", width = 5, height = 4, units = 'in', res = 500)
+plot(etalist, thr_list0c, type='l', lty=1, ylim=c(0.52,0.59), xlab='', ylab='')
+lines(etalist, thr_list1c, lty=2)
+lines(etalist, thr_list2c, lty=3)
+#points(etalist, thr_list0c, pch = 10, cex = 0.5)
+legend("topright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+
+############################################
+### 4.2 Graph: probability
+############################################
+setwd("C:/OwnCloud/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
+setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
+
+# First plot
+png("03_Programming/figure/probability_mu.png", width = 5, height = 4, units = 'in', res = 500)
+plot(drift, prob5_mu0, type='l', lty=1, ylim=c(15, 85), xlab='', ylab='')
+#points(drift, prob5_mu0, pch = 10, cex = 0.5)
+lines(drift, prob5_mu1, lty=2)
+lines(drift, prob5_mu2, lty=3)
+lines(drift, prob10_mu0, lty=1, col = "blue")
+lines(drift, prob10_mu1, lty=2, col = "blue")
+lines(drift, prob10_mu2, lty=3, col = "blue")
+legend("bottomright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+# Second plot
+png("03_Programming/figure/probability_sigma.png", width = 5, height = 4, units = 'in', res = 500)
+plot(volatil, prob5_sigma0, type='l', lty=1, ylim=c(15, 85), xlab='', ylab='')
+#points(volatil, prob5_sigma0, pch = 10, cex = 0.5)
+lines(volatil, prob5_sigma1, lty=2)
+lines(volatil, prob5_sigma2, lty=3)
+lines(volatil, prob10_sigma0, lty=1, col = "blue")
+lines(volatil, prob10_sigma1, lty=2, col = "blue")
+lines(volatil, prob10_sigma2, lty=3, col = "blue")
+legend("bottomright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+# Third plot
+png("03_Programming/figure/probability_lambda.png", width = 5, height = 4, units = 'in', res = 500)
+plot(lamlist, prob5_lambda0, type='l', lty=1, ylim=c(15, 85), xlab='', ylab='')
+#points(lamlist, prob5_lambda0, pch = 10, cex = 0.5)
+lines(lamlist, prob5_lambda1, lty=2)
+lines(lamlist, prob5_lambda2, lty=3)
+lines(lamlist, prob10_lambda0, lty=1, col = "blue")
+lines(lamlist, prob10_lambda1, lty=2, col = "blue")
+lines(lamlist, prob10_lambda2, lty=3, col = "blue")
+legend("bottomright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
+
+
+# Fourth plot
+png("03_Programming/figure/probability_eta.png", width = 5, height = 4, units = 'in', res = 500)
+plot(etalist, prob5_eta0, type='l', lty=1, ylim=c(15, 85), xlab='', ylab='')
+#points(etalist, prob5_eta0, pch = 10, cex = 0.5)
+lines(etalist, prob5_eta1, lty=2)
+lines(etalist, prob5_eta2, lty=3)
+lines(etalist, prob10_eta0, lty=1, col = "blue")
+lines(etalist, prob10_eta1, lty=2, col = "blue")
+lines(etalist, prob10_eta2, lty=3, col = "blue")
+legend("bottomright", cex = 0.8, lty=1:3,
+       legend = c(expression(paste(epsilon," = 0")), 
+                  expression(paste(epsilon," = 0.5 ")), 
+                  expression(paste(epsilon," = 2"))))
+dev.off()
