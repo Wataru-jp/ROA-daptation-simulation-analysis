@@ -122,13 +122,7 @@ for (i in 1:length(lamlist)){
 
 
 ### ** Figure #### 
-## Path
-setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de/08_WP2_ROA/01_Irrigation_investment_numerical")
-setwd("C:/OwnCloud/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
-setwd("D:/OC/DETECT/DETECT-SP/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
-
 ## Combined figure: Adaptation threshold
-png("03_Programming/simulation/figure/Figure1_v04.png", width = 5.5, height = 4, units = 'in', res = 500)
 layout(matrix(c(1,2,3,4,5,5), nrow=3, byrow=TRUE), heights=c(5, 5, 0.75))
 par(mai=c(0.45,0.5,0.3,0.1))
 
@@ -170,27 +164,6 @@ legend(x="center", ncol=3, lty=1:3,
                   expression(paste(epsilon," = 0.5")), 
                   expression(paste(epsilon," = 2"))),
        lwd = 1.5)
-
-dev.off()
-
-
-## Comparison: approximated closed form vs numerical solution
-png("03_Programming/simulation/figure/FigureA1.png", width = 5, height = 4, units = 'in', res = 500)
-plot(etalist, threshold_list3[1,], type='l', lty=1, xlab='', ylab='', ylim = c(0.655, 0.73),
-     main = expression(bold(paste("Magnitude ", "\u03b7"))), cex.main = 1, yaxt="n")
-axis(2, at=seq(0.66,0.73,0.02), labels=c("0.66","0.68","0.70","0.72"), las = 2)
-lines(etalist, threshold_list3[2,], lty=2)
-lines(etalist, threshold_list3[3,], lty=3)
-lines(etalist, threshold_list3b[1,], lty=1, col="lightblue")
-lines(etalist, threshold_list3b[2,], lty=2, col="lightblue")
-lines(etalist, threshold_list3b[3,], lty=3, col="lightblue")
-legend(x="top", ncol=3, lty=1:3,
-       legend = c(expression(paste(epsilon," = 0")), 
-                  expression(paste(epsilon," = 0.5")), 
-                  expression(paste(epsilon," = 2"))),
-       cex = 0.7)
-dev.off()
-
 
 
 
@@ -332,14 +305,7 @@ for (s in 1:length(lamlist)){
 
 
 ### ** Figure ####
-## Path
-setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
-setwd("C:/OwnCloud/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
-setwd("D:/OC/DETECT/DETECT-SP/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
-
 ## Combined figure
-png(paste0("03_Programming/simulation/figure/Figure2_v04_N=",n,".png"), width = 5, height = 4, units = 'in', res = 500)
-#png(paste0("03_Programming/simulation/figure/Figure2_v02.png"), width = 5, height = 4, units = 'in', res = 500)
 layout(matrix(c(1,2,3,4,5,5), nrow=3, byrow=TRUE), heights=c(5, 5, 1))
 par(mai=c(0.5,0.5,0.3,0.1))
 
@@ -379,7 +345,6 @@ legend(x="center", ncol=3, lty=1:3,
        legend = c(expression(paste(epsilon," = 0")), 
                   expression(paste(epsilon," = 0.5")), 
                   expression(paste(epsilon," = 2"))))
-dev.off()
 
 
 
@@ -389,9 +354,7 @@ dev.off()
 ############################## ###
 ## 4.1. Quantify the expected loss and GBM parameters ##
 ## Path
-setwd("/Users/kodam1/ownCloud - wataru.kodama@uni-goettingen.de@owncloud.gwdg.de/08_WP2_ROA/01_Irrigation_investment_numerical")
-setwd("C:/OwnCloud/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
-setwd("D:/OC/DETECT/DETECT-SP/A05/08_WP2_ROA/01_Irrigation_investment_numerical")
+setwd("")
 
 ## ** Data ####
 # Temperature mean for each model/ SSP
@@ -495,7 +458,6 @@ T2
 ## ** Thresholds ####
 ## 4.2. Adaptation threshold and probability ##
 para <- c(0.0290, 0.1092, 0.300, 0.0600, 0.1000) #  (mu, sigma, eta, lambda, rho)
-#para <- c(0.0309, 0.1233, 0.300, 0.0600, 0.1000) # old parameter set
 drift <- c(-T2[10, 1], -T2[10, 2], -T2[10, 3], -T2[10, 4], -T2[10, 5]) # for diff SSP
 volat <- c(T2[11, 1], T2[11, 2], T2[11, 3], T2[11, 4], T2[11, 5]) # for diff SSP
 
@@ -541,8 +503,6 @@ for (i in 1:5) {
 }
 
 # Simulate GBM with Poisson Jump process
-# STS: HERE I REPLACED X_C_T WITH xt[[s]][i, t]!!
-# NOT SURE IF CORRECT
 for (s in 1:5) {
   for (i in 1:n) {
     for (t in 1:(N-1)) {
